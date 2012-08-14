@@ -8,6 +8,7 @@ import cleo.search.TypeaheadElement;
 import cleo.search.collector.Collector;
 import cleo.search.collector.SortedCollector;
 import cleo.search.selector.ScoredElementSelectorFactory;
+import cleo.search.selector.StrictPrefixSelectorFactory;
 import cleo.search.tool.GenericTypeaheadInitializer;
 import cleo.search.typeahead.GenericTypeahead;
 import cleo.search.typeahead.GenericTypeaheadConfig;
@@ -36,7 +37,7 @@ public class CleoTypeaheadService implements TypeaheadService
         properties.load(inputStream);
 
         GenericTypeaheadConfig config = TypeaheadConfigFactory.createGenericTypeaheadConfig(properties);
-        config.setSelectorFactory(new ScoredElementSelectorFactory());
+        config.setSelectorFactory(new StrictPrefixSelectorFactory());
 
         GenericTypeaheadInitializer<TypeaheadElement> initializer = new GenericTypeaheadInitializer(config);
 
