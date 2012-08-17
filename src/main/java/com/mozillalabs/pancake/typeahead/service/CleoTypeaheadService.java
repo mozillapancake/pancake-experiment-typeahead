@@ -7,7 +7,6 @@ import cleo.search.SimpleTypeaheadElement;
 import cleo.search.TypeaheadElement;
 import cleo.search.collector.Collector;
 import cleo.search.collector.SortedCollector;
-import cleo.search.selector.ScoredElementSelectorFactory;
 import cleo.search.selector.StrictPrefixSelectorFactory;
 import cleo.search.tool.GenericTypeaheadInitializer;
 import cleo.search.typeahead.GenericTypeahead;
@@ -15,10 +14,13 @@ import cleo.search.typeahead.GenericTypeaheadConfig;
 import cleo.search.typeahead.MultiTypeahead;
 import cleo.search.typeahead.Typeahead;
 import cleo.search.typeahead.TypeaheadConfigFactory;
-import com.mozillalabs.pancake.typeahead.main.Standalone;
 
+import java.io.EOFException;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
@@ -26,14 +28,13 @@ public class CleoTypeaheadService implements TypeaheadService
 {
     List<Indexer<TypeaheadElement>> indexerList;
     List<Typeahead<TypeaheadElement>> searcherList;
-    GenericTypeahead<TypeaheadElement> gta;
     Indexer<TypeaheadElement> indexer;
     Typeahead<TypeaheadElement> searcher;
 
-    private GenericTypeahead<TypeaheadElement> createTypeahead() throws Exception
+    private GenericTypeahead<TypeaheadElement> createTypeahead(String name) throws Exception
     {
         Properties properties = new Properties();
-        InputStream inputStream = CleoTypeaheadService.class.getClassLoader().getResourceAsStream("cleo.properties");
+        InputStream inputStream = CleoTypeaheadService.class.getClassLoader().getResourceAsStream(name);
         properties.load(inputStream);
 
         GenericTypeaheadConfig config = TypeaheadConfigFactory.createGenericTypeaheadConfig(properties);
@@ -58,25 +59,48 @@ public class CleoTypeaheadService implements TypeaheadService
         indexerList = new ArrayList<Indexer<TypeaheadElement>>();
         searcherList = new ArrayList<Typeahead<TypeaheadElement>>();
 
-        gta = createTypeahead();
+        GenericTypeahead<TypeaheadElement> gta1 = createTypeahead("cleo1.properties");
+        indexerList.add(gta1);
+        searcherList.add(gta1);
 
-        indexerList.add(gta);
-        searcherList.add(gta);
+        GenericTypeahead<TypeaheadElement> gta2 = createTypeahead("cleo2.properties");
+        indexerList.add(gta2);
+        searcherList.add(gta2);
 
         indexer = new MultiIndexer<TypeaheadElement>("SearchQuery", indexerList);
         searcher = new MultiTypeahead<TypeaheadElement>("SearchQuery", searcherList);
 
-        int id = 0;
-        indexer.index(createTypeaheadElement(id++, "Cheap"));
-        indexer.index(createTypeaheadElement(id++, "Cheat Sheet"));
-        indexer.index(createTypeaheadElement(id++, "Cheese"));
-        indexer.index(createTypeaheadElement(id++, "Cheesecake"));
-        indexer.index(createTypeaheadElement(id++, "Cheese Crackers"));
-        indexer.index(createTypeaheadElement(id++, "Cheesy"));
-        indexer.index(createTypeaheadElement(id++, "Cheek"));
-        indexer.index(createTypeaheadElement(id++, "Cheeky"));
-        indexer.index(createTypeaheadElement(id++, "Cheekbones"));
-        indexer.index(createTypeaheadElement(id++, "Cheer"));
+        if (false)
+        {
+            FileInputStream fileInputStream = new FileInputStream("words.out");
+            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+
+            try {
+                int i = 0;
+                Object[] tuple;
+                while ((tuple = (Object[]) objectInputStream.readObject()) != null)
+                {
+                    i++;
+
+                    SimpleTypeaheadElement element = new SimpleTypeaheadElement(i);
+                    element.setTerms((String[]) tuple[1]);
+                    element.setLine1((String) tuple[0]);
+                    element.setScore(1);
+
+                    indexer.index(element);
+
+                    if ((i % 1000) == 0) {
+                        System.out.println(new Date() + " Indexed " + i);
+                        System.out.println(new Date() + "     Heap: max=" + (Runtime.getRuntime().maxMemory()/1024/1024) + " used=" + ((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())/1024/1024));
+                    }
+                }
+            } catch (EOFException e) {
+                System.out.println(new Date() + " EOF DONE");
+            }
+
+            objectInputStream.close();
+            fileInputStream.close();
+        }
     }
 
     @Override
